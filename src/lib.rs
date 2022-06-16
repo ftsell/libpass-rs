@@ -12,14 +12,13 @@
     clippy::unwrap_used
 )]
 
-use crate::errors::PassError;
-use crate::store_entry::{StoreDirectoryRef, StoreFileRef};
+pub use crate::errors::PassError;
+pub use crate::store_entry::{StoreDirectoryRef, StoreEntry, StoreFileRef};
 use lazy_static::lazy_static;
 use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
-use store_entry::StoreEntry;
 
 mod errors;
 mod store_entry;
@@ -27,12 +26,11 @@ mod store_entry;
 mod tests;
 mod utils;
 
-/// Error type used by *libpass*.
-/// Equivalent to `Result<T, PassError>`.
+/// Custom Result that is equivalent to `Result<T, PassError>`.
 pub type Result<T, E = PassError> = core::result::Result<T, E>;
 
 lazy_static! {
-    /// Directory which holds the pass password store
+    /// lazy-static that holds the pass password store directory
     pub static ref PASSWORD_STORE_DIR: PathBuf = {
         let path = match env::var("PASSWORD_STORE_DIR") {
             Ok(env_var) => Path::new(&env_var).to_path_buf(),
@@ -43,7 +41,7 @@ lazy_static! {
 }
 
 /// List all entries in the password store
-pub fn list_entries() -> Result<HashSet<StoreEntry>> {
+pub fn list() -> Result<HashSet<StoreEntry>> {
     list_and_map_folder(&*PASSWORD_STORE_DIR)
 }
 

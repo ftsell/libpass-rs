@@ -12,9 +12,9 @@ fn set_store_dir() {
 #[test]
 fn test_list_entries() {
     set_store_dir();
-    println!("{:#?}", list_entries().unwrap());
+    println!("{:#?}", list().unwrap());
     assert_eq!(
-        list_entries().unwrap(),
+        list().unwrap(),
         HashSet::from_iter(
             vec![
                 StoreEntry::File(StoreFileRef {
