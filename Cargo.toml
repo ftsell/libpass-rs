@@ -7,7 +7,7 @@ authors = ["Finn Sell <dev@finn-thorben.me>"]
 edition = "2021"
 repository = "https://github.com/ftsell/libpass"
 license = "MIT"
-keywords = ["pass", "password", "password manager", "manager", "unix"]
+keywords = ["pass", "password", "manager", "unix"]
 categories = ["api-bindings", "cryptography", "data-structures", "filesystem"]
 
 [dependencies]
