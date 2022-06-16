@@ -1,7 +1,6 @@
 //! Type definitions and interaction logic for entries in a password store
 
 use crate::{utils, Result};
-use gpgme::Data;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
