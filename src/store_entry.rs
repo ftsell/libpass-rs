@@ -1,6 +1,6 @@
 //! Type definitions and interaction logic for entries in a password store
 
-use crate::{utils, Result};
+use crate::{utils, PassError, Result, PASSWORD_STORE_DIR};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -20,24 +20,52 @@ pub enum StoreEntry {
 }
 
 impl StoreEntry {
-    pub fn secret_name(&self) -> &str {
-        match self {
+    /// Retrieve the name of the store entry
+    ///
+    /// The name is represented as a relative path from the store root and can be used to retrieve this
+    /// entry using [`retrieve`](crate::retrieve).
+    pub fn name(&self) -> Result<String> {
+        let path = match self {
             StoreEntry::Directory { path, .. } => path,
             StoreEntry::File(file) => &file.path,
+        };
+
+        let relative_path = path.strip_prefix(&*PASSWORD_STORE_DIR).map_err(|_| {
+            PassError::InvalidStoreFormat(
+                path.to_owned(),
+                "Path is not inside password store".to_string(),
+            )
+        })?;
+        let relative_path = relative_path
+            .to_str()
+            .ok_or_else(|| PassError::PathDecodingError(path.to_owned()))?;
+
+        match self {
+            StoreEntry::Directory { .. } => Ok(relative_path.to_string()),
+            StoreEntry::File(_) => Ok(relative_path
+                .strip_suffix(".gpg")
+                .ok_or_else(|| {
+                    PassError::InvalidStoreFormat(
+                        path.to_owned(),
+                        "File does not end with .gpg extension".to_string(),
+                    )
+                })?
+                .to_string()),
         }
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .rsplit_once('.')
-        .unwrap()
-        .0
     }
 
+    /// Verify that this store entry matches what is actually present on the filesystem
     pub(crate) fn is_valid_on_fs(&self) -> bool {
         match self {
             StoreEntry::Directory { path, .. } => path.exists() && path.is_dir(),
-            StoreEntry::File(file) => file.path.exists() && file.path.is_file(),
+            StoreEntry::File(file) => {
+                file.path.exists()
+                    && file.path.is_file()
+                    && match file.path.extension() {
+                        None => false,
+                        Some(extension) => extension == "gpg",
+                    }
+            }
         }
     }
 }

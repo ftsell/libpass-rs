@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use crate::*;
 
 fn set_store_dir() {
@@ -90,4 +92,51 @@ fn test_get_content() {
 
     assert!(entry.get_ciphertext().is_ok());
     assert_eq!(entry.get_plaintext().unwrap(), "foobar123\n".as_bytes());
+}
+
+#[test]
+fn test_get_entry_name() {
+    set_store_dir();
+
+    // simple file
+    assert_eq!(
+        StoreEntry::File(StoreFileRef {
+            path: PASSWORD_STORE_DIR.join("secret-a.gpg")
+        })
+        .name()
+        .unwrap(),
+        "secret-a"
+    );
+
+    // simple directory
+    assert_eq!(
+        StoreEntry::Directory {
+            path: PASSWORD_STORE_DIR.join("folder"),
+            content: vec![],
+        }
+        .name()
+        .unwrap(),
+        "folder"
+    );
+
+    // file in subdirectory
+    assert_eq!(
+        StoreEntry::File(StoreFileRef {
+            path: PASSWORD_STORE_DIR.join("folder/subsecret-a.gpg"),
+        })
+        .name()
+        .unwrap(),
+        "folder/subsecret-a"
+    );
+
+    // directory in subdirectory
+    assert_eq!(
+        StoreEntry::Directory {
+            path: PASSWORD_STORE_DIR.join("folder/subfolder"),
+            content: vec![],
+        }
+        .name()
+        .unwrap(),
+        "folder/subfolder"
+    );
 }

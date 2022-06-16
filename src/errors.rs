@@ -12,6 +12,8 @@ pub enum PassError {
     InvalidStoreFormat(PathBuf, String),
     #[error("The requested entry ({0}) was not found in the password store")]
     EntryNotFound(String),
+    #[error("Could not decode the path {0} as UTF-8 string")]
+    PathDecodingError(PathBuf),
     #[error("IO Error")]
     IOError {
         #[from]
@@ -23,5 +25,7 @@ pub enum PassError {
     GpgError {
         #[from]
         source: gpgme::Error,
+        #[cfg(nightly)]
+        backtrace: Backtrace,
     },
 }

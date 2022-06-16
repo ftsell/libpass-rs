@@ -1,3 +1,17 @@
+//! Library for interacting with pass managed data
+#![deny(unsafe_code)]
+#![warn(
+    missing_copy_implementations,
+    missing_debug_implementations,
+    missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unreachable_pub,
+    unused_lifetimes,
+    unused_qualifications,
+    clippy::unwrap_used
+)]
+
 use crate::errors::PassError;
 use crate::store_entry::StoreFileRef;
 use lazy_static::lazy_static;
@@ -17,6 +31,7 @@ mod utils;
 pub type Result<T, E = PassError> = core::result::Result<T, E>;
 
 lazy_static! {
+    /// Directory which holds the pass password store
     pub static ref PASSWORD_STORE_DIR: PathBuf = {
         let path = match env::var("PASSWORD_STORE_DIR") {
             Ok(env_var) => Path::new(&env_var).to_path_buf(),
