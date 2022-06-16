@@ -13,7 +13,7 @@
 )]
 
 use crate::errors::PassError;
-use crate::store_entry::StoreFileRef;
+use crate::store_entry::{StoreDirectoryRef, StoreFileRef};
 use lazy_static::lazy_static;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -68,10 +68,10 @@ pub fn list_entries() -> Result<Vec<StoreEntry>> {
                             path: path.clone()
                         }))
                     } else if file_type.is_dir() {
-                        Ok(StoreEntry::Directory {
+                        Ok(StoreEntry::Directory(StoreDirectoryRef{
                             content: list_and_map_folder(&path)?,
                             path: path.clone(),
-                        })
+                        }))
                     } else {
                         Err(PassError::InvalidStoreFormat(
                             path.clone(),

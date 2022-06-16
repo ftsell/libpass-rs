@@ -9,12 +9,7 @@ use std::path::PathBuf;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum StoreEntry {
     /// A reference to a directory which contains other entries
-    Directory {
-        /// Path to the referenced directory relative to the store root
-        path: PathBuf,
-        /// Other entries that are contained in this directory
-        content: Vec<StoreEntry>,
-    },
+    Directory(StoreDirectoryRef),
     /// A reference to a file that holds the actual content of a store
     File(StoreFileRef),
 }
@@ -26,7 +21,7 @@ impl StoreEntry {
     /// entry using [`retrieve`](crate::retrieve).
     pub fn name(&self) -> Result<String> {
         let path = match self {
-            StoreEntry::Directory { path, .. } => path,
+            StoreEntry::Directory(dir) => &dir.path,
             StoreEntry::File(file) => &file.path,
         };
 
@@ -57,7 +52,7 @@ impl StoreEntry {
     /// Verify that this store entry matches what is actually present on the filesystem
     pub(crate) fn is_valid_on_fs(&self) -> bool {
         match self {
-            StoreEntry::Directory { path, .. } => path.exists() && path.is_dir(),
+            StoreEntry::Directory(dir) => dir.path.exists() && dir.path.is_dir(),
             StoreEntry::File(file) => {
                 file.path.exists()
                     && file.path.is_file()
@@ -70,10 +65,19 @@ impl StoreEntry {
     }
 }
 
+/// A reference to a directory in the password store
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct StoreDirectoryRef {
+    /// Absolute path to the referenced directory
+    pub path: PathBuf,
+    /// Other entries that are contained in this directory
+    pub content: Vec<StoreEntry>,
+}
+
 /// A reference to a file in the password store
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct StoreFileRef {
-    /// Path to the referenced directory relative to the store root
+    /// Absolute path to the referenced directory
     pub path: PathBuf,
 }
 

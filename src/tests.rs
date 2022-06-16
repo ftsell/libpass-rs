@@ -22,7 +22,7 @@ fn test_list_entries() {
             StoreEntry::File(StoreFileRef {
                 path: PASSWORD_STORE_DIR.join("secret-b.gpg")
             }),
-            StoreEntry::Directory {
+            StoreEntry::Directory(StoreDirectoryRef {
                 path: PASSWORD_STORE_DIR.join("folder"),
                 content: vec![
                     StoreEntry::File(StoreFileRef {
@@ -31,7 +31,7 @@ fn test_list_entries() {
                     StoreEntry::File(StoreFileRef {
                         path: PASSWORD_STORE_DIR.join("folder/subsecret-b.gpg")
                     }),
-                    StoreEntry::Directory {
+                    StoreEntry::Directory(StoreDirectoryRef {
                         path: PASSWORD_STORE_DIR.join("folder/subfolder"),
                         content: vec![
                             StoreEntry::File(StoreFileRef {
@@ -41,15 +41,15 @@ fn test_list_entries() {
                                 path: PASSWORD_STORE_DIR.join("folder/subfolder/generated-b.gpg"),
                             })
                         ]
-                    }
+                    })
                 ]
-            },
-            StoreEntry::Directory {
+            }),
+            StoreEntry::Directory(StoreDirectoryRef {
                 path: PASSWORD_STORE_DIR.join("folder2"),
                 content: vec![StoreEntry::File(StoreFileRef {
                     path: PASSWORD_STORE_DIR.join("folder2/subsecret-a.gpg")
                 })]
-            }
+            })
         ]
     );
 }
@@ -110,10 +110,10 @@ fn test_get_entry_name() {
 
     // simple directory
     assert_eq!(
-        StoreEntry::Directory {
+        StoreEntry::Directory(StoreDirectoryRef {
             path: PASSWORD_STORE_DIR.join("folder"),
             content: vec![],
-        }
+        })
         .name()
         .unwrap(),
         "folder"
@@ -131,10 +131,10 @@ fn test_get_entry_name() {
 
     // directory in subdirectory
     assert_eq!(
-        StoreEntry::Directory {
+        StoreEntry::Directory(StoreDirectoryRef {
             path: PASSWORD_STORE_DIR.join("folder/subfolder"),
             content: vec![],
-        }
+        })
         .name()
         .unwrap(),
         "folder/subfolder"
