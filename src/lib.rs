@@ -1,15 +1,15 @@
 use crate::errors::PassError;
-use crate::typedefs::StoreFileRef;
+use crate::store_entry::StoreFileRef;
 use lazy_static::lazy_static;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
-use typedefs::StoreEntry;
+use store_entry::StoreEntry;
 
 mod errors;
+mod store_entry;
 #[cfg(test)]
 mod tests;
-mod typedefs;
 mod utils;
 
 /// Error type used by *libpass*.

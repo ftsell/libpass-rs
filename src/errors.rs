@@ -19,4 +19,9 @@ pub enum PassError {
         #[cfg(nightly)]
         backtrace: Backtrace,
     },
+    #[error("GPG error")]
+    GpgError {
+        #[from]
+        source: gpgme::Error,
+    },
 }

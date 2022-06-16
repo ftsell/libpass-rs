@@ -1,4 +1,9 @@
-use crate::Result;
+//! Type definitions and interaction logic for entries in a password store
+
+use crate::{utils, Result};
+use gpgme::Data;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 
 /// An entry in the password store
@@ -46,7 +51,21 @@ pub struct StoreFileRef {
 }
 
 impl StoreFileRef {
-    pub fn get_content(decrypt: bool) -> Result<()> {
-        todo!()
+    /// Retrieve the encrypted files content
+    pub fn get_ciphertext(&self) -> Result<Vec<u8>> {
+        let mut file = File::open(&self.path)?;
+        let mut buffer = Vec::with_capacity(file.metadata()?.len() as usize);
+        file.read_to_end(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    /// Retrieve and decrypt the files content
+    pub fn get_plaintext(&self) -> Result<Vec<u8>> {
+        let mut ciphertext = self.get_ciphertext()?;
+        let mut plaintext = Vec::new();
+        let mut ctx = utils::create_gpg_context()?;
+        ctx.decrypt(&mut ciphertext, &mut plaintext)?;
+
+        Ok(plaintext)
     }
 }

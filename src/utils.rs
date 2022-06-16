@@ -1,10 +1,13 @@
 //! General utilities used internally
 
+use crate::Result;
+
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
 use directories::UserDirs;
+use gpgme::{Context, Protocol};
 use lazy_static::lazy_static;
 
 /// Expand `~` in a path and canonicalize it afterwards
@@ -21,4 +24,9 @@ pub(crate) fn canonicalize_path<P: AsRef<Path>>(path: &P) -> io::Result<PathBuf>
 
     let home_resolved = HOME_DIR.join(path.strip_prefix("~").unwrap());
     home_resolved.canonicalize()
+}
+
+/// Create a gpgme context that is initialized as we need it
+pub(crate) fn create_gpg_context() -> Result<Context> {
+    Ok(Context::from_protocol(Protocol::OpenPgp)?)
 }

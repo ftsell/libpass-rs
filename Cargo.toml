@@ -15,5 +15,6 @@ log = "0.4.17"
 thiserror = "1.0.31"
 lazy_static = "1.4.0"
 directories = "4.0.1"
+gpgme = "0.10.0"
 
 [dev-dependencies]

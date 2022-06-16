@@ -1,11 +1,15 @@
 use crate::*;
 
-#[test]
-fn test_list_entries() {
+fn set_store_dir() {
     env::set_var(
         "PASSWORD_STORE_DIR",
         env::current_dir().unwrap().join("tests/simple"),
     );
+}
+
+#[test]
+fn test_list_entries() {
+    set_store_dir();
     println!("{:#?}", list_entries().unwrap());
     assert_eq!(
         list_entries().unwrap(),
@@ -50,11 +54,7 @@ fn test_list_entries() {
 
 #[test]
 fn test_retrieve_entry() {
-    env::set_var(
-        "PASSWORD_STORE_DIR",
-        env::current_dir().unwrap().join("tests/simple"),
-    );
-
+    set_store_dir();
     // retrieving a secret works
     assert_eq!(
         retrieve("secret-a").unwrap(),
@@ -77,4 +77,17 @@ fn test_retrieve_entry() {
     // retrieving an existing folder does not work
     assert!(retrieve("folder").is_err());
     assert!(retrieve("folder/").is_err());
+}
+
+#[test]
+fn test_get_content() {
+    set_store_dir();
+    let entry = if let StoreEntry::File(file) = retrieve("secret-a").unwrap() {
+        file
+    } else {
+        panic!("not a file")
+    };
+
+    assert!(entry.get_ciphertext().is_ok());
+    assert_eq!(entry.get_plaintext().unwrap(), "foobar123\n".as_bytes());
 }
