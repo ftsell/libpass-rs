@@ -1,6 +1,36 @@
-//! Library for interacting with pass managed data
+//! Library for interacting with [pass](https://www.passwordstore.org/) managed data
+//!
+//! # Examples
+//!
+//! **Note:** These examples assume that the environment variable `PASSWORD_STORE_DIR` is set to point
+//! to the `tests/simple/` folder of this repository.
+//!
+//! - Retrieve a specific entry from the store
+//!
+//!   ```
+//!     # std::env::set_var("PASSWORD_STORE_DIR", std::env::current_dir().unwrap().join("tests/simple"));
+//!     let entry = libpass::retrieve("folder/subsecret-a").unwrap();
+//!     assert_eq!(entry.name().unwrap(), "folder/subsecret-a");
+//!   ```
+//!
+//! - Retrieve and decrypt a specific entry from the store
+//!
+//!   ```
+//!     use libpass::StoreEntry;
+//!     # std::env::set_var("PASSWORD_STORE_DIR", std::env::current_dir().unwrap().join("tests/simple"));
+//!
+//!     match libpass::retrieve("folder/subsecret-a").unwrap() {
+//!         StoreEntry::File(entry) => {
+//!             assert_eq!(entry.get_plaintext().unwrap(), "foobar123\n".as_bytes())
+//!         },
+//!         _ => panic!()
+//!     }
+//!   ```
+//!
+
 #![deny(unsafe_code)]
 #![warn(
+    clippy::unwrap_used,
     missing_copy_implementations,
     missing_debug_implementations,
     missing_docs,
@@ -8,8 +38,7 @@
     trivial_numeric_casts,
     unreachable_pub,
     unused_lifetimes,
-    unused_qualifications,
-    clippy::unwrap_used
+    unused_qualifications
 )]
 
 pub use crate::errors::PassError;
@@ -30,7 +59,10 @@ mod utils;
 pub type Result<T, E = PassError> = core::result::Result<T, E>;
 
 lazy_static! {
-    /// lazy-static that holds the pass password store directory
+    /// lazy-static that indicates the password store directory
+    ///
+    /// Defaults to `~/.password-store` but can be overridden by the environment variable `PASSWORD_STORE_DIR`
+    /// just like [pass itself](https://git.zx2c4.com/password-store/about/#ENVIRONMENT%20VARIABLES)
     pub static ref PASSWORD_STORE_DIR: PathBuf = {
         let path = match env::var("PASSWORD_STORE_DIR") {
             Ok(env_var) => Path::new(&env_var).to_path_buf(),
