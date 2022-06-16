@@ -25,6 +25,7 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         rust-version: [stable, beta, nightly]
     steps:
