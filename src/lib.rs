@@ -24,10 +24,6 @@ lazy_static! {
         };
         utils::canonicalize_path(&path).expect("Could not canonicalize PASSWORD_STORE_DIR path")
     };
-
-    /// Files that are ignored if they are found within the pass directory structure because they serve a special
-    /// meaning and are interpreted explicitly when necessary
-    static ref IGNORED_FILES: Vec<&'static OsStr> = vec![OsStr::new(".git"), OsStr::new(".gpg-id")];
 }
 
 /// List all entries in the password store
