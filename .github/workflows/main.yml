@@ -1,4 +1,4 @@
-name: on-push
+name: main
 on: [ push ]
 jobs:
   check-pre-commit:
