@@ -73,12 +73,13 @@ fn test_retrieve_entry() {
         })
     );
 
-    // retrieving not existing secrets returns an error but does not panic
-    assert!(retrieve("not-existing-folder/not-existing-secret").is_err());
+    // retrieving a folder works
+    assert!(retrieve("folder").is_ok());
+    assert!(retrieve("folder/").is_ok());
 
-    // retrieving an existing folder does not work
-    assert!(retrieve("folder").is_err());
-    assert!(retrieve("folder/").is_err());
+    // retrieving not existing things returns an error but does not panic
+    assert!(retrieve("not-existing-folder").is_err());
+    assert!(retrieve("not-existing-folder/not-existing-secret").is_err());
 }
 
 #[test]

@@ -10,6 +10,8 @@ pub enum PassError {
     PasswordStoreNotFound(PathBuf),
     #[error("The pass store at {0} is incorrectly formatted: {1}")]
     InvalidStoreFormat(PathBuf, String),
+    #[error("Password name {0} is ambiguous because it references a directory as well as a file inside the store")]
+    AmbiguousPassName(String),
     #[error("The requested entry ({0}) was not found in the password store")]
     EntryNotFound(String),
     #[error("Could not decode the path {0} as UTF-8 string")]

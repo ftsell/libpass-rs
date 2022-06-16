@@ -1,6 +1,6 @@
 //! Type definitions and interaction logic for entries in a password store
 
-use crate::{utils, PassError, Result, PASSWORD_STORE_DIR};
+use crate::{utils, PassError, Result};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -20,47 +20,17 @@ impl StoreEntry {
     /// The name is represented as a relative path from the store root and can be used to retrieve this
     /// entry using [`retrieve`](crate::retrieve).
     pub fn name(&self) -> Result<String> {
-        let path = match self {
-            StoreEntry::Directory(dir) => &dir.path,
-            StoreEntry::File(file) => &file.path,
-        };
-
-        let relative_path = path.strip_prefix(&*PASSWORD_STORE_DIR).map_err(|_| {
-            PassError::InvalidStoreFormat(
-                path.to_owned(),
-                "Path is not inside password store".to_string(),
-            )
-        })?;
-        let relative_path = relative_path
-            .to_str()
-            .ok_or_else(|| PassError::PathDecodingError(path.to_owned()))?;
-
         match self {
-            StoreEntry::Directory { .. } => Ok(relative_path.to_string()),
-            StoreEntry::File(_) => Ok(relative_path
-                .strip_suffix(".gpg")
-                .ok_or_else(|| {
-                    PassError::InvalidStoreFormat(
-                        path.to_owned(),
-                        "File does not end with .gpg extension".to_string(),
-                    )
-                })?
-                .to_string()),
+            Self::Directory(dir) => dir.name(),
+            Self::File(file) => file.name(),
         }
     }
 
     /// Verify that this store entry matches what is actually present on the filesystem
-    pub(crate) fn is_valid_on_fs(&self) -> bool {
+    pub(crate) fn verify(&self) -> Result<()> {
         match self {
-            StoreEntry::Directory(dir) => dir.path.exists() && dir.path.is_dir(),
-            StoreEntry::File(file) => {
-                file.path.exists()
-                    && file.path.is_file()
-                    && match file.path.extension() {
-                        None => false,
-                        Some(extension) => extension == "gpg",
-                    }
-            }
+            Self::Directory(dir) => dir.verify(),
+            Self::File(file) => file.verify(),
         }
     }
 }
@@ -74,6 +44,28 @@ pub struct StoreDirectoryRef {
     pub content: Vec<StoreEntry>,
 }
 
+impl StoreDirectoryRef {
+    /// Retrieve the name of the store entry
+    ///
+    /// The name is represented as a relative path from the store root and can be used to retrieve this
+    /// entry using [`retrieve`](crate::retrieve).
+    pub fn name(&self) -> Result<String> {
+        Ok(utils::path2str(utils::abspath2relpath(&self.path)?)?.to_string())
+    }
+
+    /// Verify that *self* references an existing directory
+    pub(crate) fn verify(&self) -> Result<()> {
+        if self.path.exists() && self.path.is_dir() {
+            Ok(())
+        } else {
+            Err(PassError::InvalidStoreFormat(
+                self.path.to_owned(),
+                "Path either does not exist or is not a directory".to_string(),
+            ))
+        }
+    }
+}
+
 /// A reference to a file in the password store
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct StoreFileRef {
@@ -82,6 +74,24 @@ pub struct StoreFileRef {
 }
 
 impl StoreFileRef {
+    /// Retrieve the name of the store entry
+    ///
+    /// The name is represented as a relative path from the store root and can be used to retrieve this
+    /// entry using [`retrieve`](crate::retrieve).
+    pub fn name(&self) -> Result<String> {
+        let relative_path = utils::path2str(utils::abspath2relpath(&self.path)?)?;
+
+        Ok(relative_path
+            .strip_suffix(".gpg")
+            .ok_or_else(|| {
+                PassError::InvalidStoreFormat(
+                    self.path.to_owned(),
+                    "File does not end with .gpg extension".to_string(),
+                )
+            })?
+            .to_string())
+    }
+
     /// Retrieve the encrypted files content
     pub fn get_ciphertext(&self) -> Result<Vec<u8>> {
         let mut file = File::open(&self.path)?;
@@ -98,5 +108,20 @@ impl StoreFileRef {
         ctx.decrypt(&mut ciphertext, &mut plaintext)?;
 
         Ok(plaintext)
+    }
+
+    /// Verify that *self* references an existing file with the expected file extension
+    pub(crate) fn verify(&self) -> Result<()> {
+        if self.path.exists()
+            && self.path.is_file()
+            && match self.path.extension() {
+                None => false,
+                Some(extension) => extension == "gpg",
+            }
+        {
+            Ok(())
+        } else {
+            Err(PassError::InvalidStoreFormat(self.path.to_owned(), "Path either does not exist, is not a regular file or does not have a .gpg extension".to_string()))
+        }
     }
 }
