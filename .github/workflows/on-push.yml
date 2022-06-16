@@ -29,11 +29,13 @@ jobs:
       matrix:
         rust-version: [stable, beta, nightly]
     steps:
-      - run: |
+      - name: install system dependencies
+        run: |
           sudo apt-get update
           sudo apt-get install gpg libgpgme-dev
       - uses: actions/checkout@v3
-      - run: |
+      - name: import test gpg key
+        run: |
           gpg --import tests/8497251104B6F45F.key
           echo -e "trust\n5\ny" | gpg --no-tty --command-fd 0 --edit-key 8497251104B6F45F
       - uses: ATiltedTree/setup-rust@v1
