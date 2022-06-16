@@ -1,0 +1,73 @@
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      bump-level:
+        description: cargo-release bump level
+        type: choice
+        options:
+          - release
+          - patch
+          - minor
+          - major
+        default: release
+        required: true
+jobs:
+  cargo-release:
+    runs-on: ubuntu-latest
+    outputs:
+      git-tag: ${{ steps.extract-git-tag.output.git-tag }}
+    steps:
+      - run: |
+          sudo apt-get update
+          sudo apt-get install libgpgme-dev
+      - run: cargo install cargo-release
+      - uses: actions/checkout@v3
+      - name: Configure git identity
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+      - name: Execute cargo-release (and cargo-publish)
+        run: cargo release -v --no-confirm --execute ${{ inputs.bump-level }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - id: extract-git-tag
+        run: |
+          GIT_TAG=$(git describe --exact-match)
+          echo "::set-output name=git-tag::$GIT_TAG"
+        shell: bash
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: [ cargo-release ]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.cargo-release.outputs.git-tag }}
+      - run: echo ${{ needs.cargo-release.outputs.git-tag }}
+      - uses: softprops/action-gh-release@v1
+        with:
+          body_path: changelog.md
+
+  reset-changelog:
+    runs-on: ubuntu-latest
+    needs: [ github-release ]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          cat <<EOF > changelog.md
+          <!--
+          This changelog file is intended to be updated during development and is automatically cleared after
+          a release
+          -->
+
+          ## Notable Changes
+          EOF
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: reset changelog for new development iteration
+          file_patterns: changelog.md
