@@ -15,6 +15,7 @@
 use crate::errors::PassError;
 use crate::store_entry::{StoreDirectoryRef, StoreFileRef};
 use lazy_static::lazy_static;
+use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -42,12 +43,12 @@ lazy_static! {
 }
 
 /// List all entries in the password store
-pub fn list_entries() -> Result<Vec<StoreEntry>> {
+pub fn list_entries() -> Result<HashSet<StoreEntry>> {
     list_and_map_folder(&*PASSWORD_STORE_DIR)
 }
 
 /// Inspect the folder at *path* and recursively map it and its content to a [`StoreEntry`]
-fn list_and_map_folder(path: impl AsRef<Path>) -> Result<Vec<StoreEntry>> {
+fn list_and_map_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
     log::trace!("Listing files in {}", PASSWORD_STORE_DIR.display());
     fs::read_dir(path)?
         // retrieve additional information about each file from filesystem

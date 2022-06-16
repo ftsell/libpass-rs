@@ -1,12 +1,14 @@
 //! Type definitions and interaction logic for entries in a password store
 
 use crate::{utils, PassError, Result};
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::Read;
 use std::path::PathBuf;
 
 /// An entry in the password store
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum StoreEntry {
     /// A reference to a directory which contains other entries
     Directory(StoreDirectoryRef),
@@ -36,12 +38,12 @@ impl StoreEntry {
 }
 
 /// A reference to a directory in the password store
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, Clone)]
 pub struct StoreDirectoryRef {
     /// Absolute path to the referenced directory
     pub path: PathBuf,
     /// Other entries that are contained in this directory
-    pub content: Vec<StoreEntry>,
+    pub content: HashSet<StoreEntry>,
 }
 
 impl StoreDirectoryRef {
@@ -66,8 +68,20 @@ impl StoreDirectoryRef {
     }
 }
 
+impl Hash for StoreDirectoryRef {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.path.hash(state);
+    }
+}
+
+impl PartialEq for StoreDirectoryRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path
+    }
+}
+
 /// A reference to a file in the password store
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct StoreFileRef {
     /// Absolute path to the referenced directory
     pub path: PathBuf,

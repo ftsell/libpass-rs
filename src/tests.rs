@@ -15,42 +15,60 @@ fn test_list_entries() {
     println!("{:#?}", list_entries().unwrap());
     assert_eq!(
         list_entries().unwrap(),
-        vec![
-            StoreEntry::File(StoreFileRef {
-                path: PASSWORD_STORE_DIR.join("secret-a.gpg")
-            }),
-            StoreEntry::File(StoreFileRef {
-                path: PASSWORD_STORE_DIR.join("secret-b.gpg")
-            }),
-            StoreEntry::Directory(StoreDirectoryRef {
-                path: PASSWORD_STORE_DIR.join("folder"),
-                content: vec![
-                    StoreEntry::File(StoreFileRef {
-                        path: PASSWORD_STORE_DIR.join("folder/subsecret-a.gpg")
-                    }),
-                    StoreEntry::File(StoreFileRef {
-                        path: PASSWORD_STORE_DIR.join("folder/subsecret-b.gpg")
-                    }),
-                    StoreEntry::Directory(StoreDirectoryRef {
-                        path: PASSWORD_STORE_DIR.join("folder/subfolder"),
-                        content: vec![
+        HashSet::from_iter(
+            vec![
+                StoreEntry::File(StoreFileRef {
+                    path: PASSWORD_STORE_DIR.join("secret-a.gpg")
+                }),
+                StoreEntry::File(StoreFileRef {
+                    path: PASSWORD_STORE_DIR.join("secret-b.gpg")
+                }),
+                StoreEntry::Directory(StoreDirectoryRef {
+                    path: PASSWORD_STORE_DIR.join("folder"),
+                    content: HashSet::from_iter(
+                        vec![
                             StoreEntry::File(StoreFileRef {
-                                path: PASSWORD_STORE_DIR.join("folder/subfolder/generated-a.gpg"),
+                                path: PASSWORD_STORE_DIR.join("folder/subsecret-a.gpg")
                             }),
                             StoreEntry::File(StoreFileRef {
-                                path: PASSWORD_STORE_DIR.join("folder/subfolder/generated-b.gpg"),
+                                path: PASSWORD_STORE_DIR.join("folder/subsecret-b.gpg")
+                            }),
+                            StoreEntry::Directory(StoreDirectoryRef {
+                                path: PASSWORD_STORE_DIR.join("folder/subfolder"),
+                                content: HashSet::from_iter(
+                                    vec![
+                                        StoreEntry::File(StoreFileRef {
+                                            path: PASSWORD_STORE_DIR
+                                                .join("folder/subfolder/generated-a.gpg"),
+                                        }),
+                                        StoreEntry::File(StoreFileRef {
+                                            path: PASSWORD_STORE_DIR
+                                                .join("folder/subfolder/generated-b.gpg"),
+                                        })
+                                    ]
+                                    .iter()
+                                    .cloned()
+                                )
                             })
                         ]
-                    })
-                ]
-            }),
-            StoreEntry::Directory(StoreDirectoryRef {
-                path: PASSWORD_STORE_DIR.join("folder2"),
-                content: vec![StoreEntry::File(StoreFileRef {
-                    path: PASSWORD_STORE_DIR.join("folder2/subsecret-a.gpg")
-                })]
-            })
-        ]
+                        .iter()
+                        .cloned()
+                    )
+                }),
+                StoreEntry::Directory(StoreDirectoryRef {
+                    path: PASSWORD_STORE_DIR.join("folder2"),
+                    content: HashSet::from_iter(
+                        vec![StoreEntry::File(StoreFileRef {
+                            path: PASSWORD_STORE_DIR.join("folder2/subsecret-a.gpg")
+                        })]
+                        .iter()
+                        .cloned()
+                    )
+                })
+            ]
+            .iter()
+            .cloned()
+        )
     );
 }
 
@@ -113,7 +131,7 @@ fn test_get_entry_name() {
     assert_eq!(
         StoreEntry::Directory(StoreDirectoryRef {
             path: PASSWORD_STORE_DIR.join("folder"),
-            content: vec![],
+            content: HashSet::new(),
         })
         .name()
         .unwrap(),
@@ -134,7 +152,7 @@ fn test_get_entry_name() {
     assert_eq!(
         StoreEntry::Directory(StoreDirectoryRef {
             path: PASSWORD_STORE_DIR.join("folder/subfolder"),
-            content: vec![],
+            content: HashSet::new(),
         })
         .name()
         .unwrap(),
