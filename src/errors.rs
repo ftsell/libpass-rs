@@ -10,6 +10,8 @@ pub enum PassError {
     PasswordStoreNotFound(PathBuf),
     #[error("The pass store at {0} is incorrectly formatted: {1}")]
     InvalidStoreFormat(PathBuf, String),
+    #[error("The requested entry ({0}) was not found in the password store")]
+    EntryNotFound(String),
     #[error("IO Error")]
     IOError {
         #[from]

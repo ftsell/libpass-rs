@@ -1,12 +1,14 @@
 use crate::errors::PassError;
+use crate::typedefs::StoreFileRef;
 use lazy_static::lazy_static;
 use std::ffi::{OsStr, OsString};
-use std::fs::{DirEntry, FileType};
 use std::path::{Path, PathBuf};
-use std::{env, fs, io};
+use std::{env, fs};
 use typedefs::StoreEntry;
 
 mod errors;
+#[cfg(test)]
+mod tests;
 mod typedefs;
 mod utils;
 
@@ -51,9 +53,9 @@ pub fn list_entries() -> Result<Vec<StoreEntry>> {
             // map to correct StoreEntry representation and recurse into subdirectories
             .map(|(path, _, file_type)|
                     if file_type.is_file() {
-                        Ok(StoreEntry::File {
+                        Ok(StoreEntry::File(StoreFileRef {
                             path: path.clone()
-                        })
+                        }))
                     } else if file_type.is_dir() {
                         Ok(StoreEntry::Directory {
                             content: list_and_map_folder(&path)?,
@@ -71,51 +73,17 @@ pub fn list_entries() -> Result<Vec<StoreEntry>> {
     list_and_map_folder(&*PASSWORD_STORE_DIR)
 }
 
-#[cfg(test)]
-#[test]
-fn test_list_entries() {
-    env::set_var(
-        "PASSWORD_STORE_DIR",
-        env::current_dir().unwrap().join("tests/simple"),
-    );
-    println!("{:#?}", list_entries().unwrap());
-    assert_eq!(
-        list_entries().unwrap(),
-        vec![
-            StoreEntry::File {
-                path: PASSWORD_STORE_DIR.join("secret-a.gpg")
-            },
-            StoreEntry::File {
-                path: PASSWORD_STORE_DIR.join("secret-b.gpg")
-            },
-            StoreEntry::Directory {
-                path: PASSWORD_STORE_DIR.join("folder"),
-                content: vec![
-                    StoreEntry::File {
-                        path: PASSWORD_STORE_DIR.join("folder/subsecret-a.gpg")
-                    },
-                    StoreEntry::File {
-                        path: PASSWORD_STORE_DIR.join("folder/subsecret-b.gpg")
-                    },
-                    StoreEntry::Directory {
-                        path: PASSWORD_STORE_DIR.join("folder/subfolder"),
-                        content: vec![
-                            StoreEntry::File {
-                                path: PASSWORD_STORE_DIR.join("folder/subfolder/generated-a.gpg"),
-                            },
-                            StoreEntry::File {
-                                path: PASSWORD_STORE_DIR.join("folder/subfolder/generated-b.gpg"),
-                            }
-                        ]
-                    }
-                ]
-            },
-            StoreEntry::Directory {
-                path: PASSWORD_STORE_DIR.join("folder2"),
-                content: vec![StoreEntry::File {
-                    path: PASSWORD_STORE_DIR.join("folder2/subsecret-a.gpg")
-                }]
-            }
-        ]
-    );
+/// Decrypt and return the password named *pass_name*.
+///
+/// `pass_name` is a path to a password file relative to the store root
+pub fn retrieve(pass_name: &str) -> Result<StoreEntry> {
+    let result = StoreEntry::File(StoreFileRef {
+        path: PASSWORD_STORE_DIR.join(pass_name.to_string() + ".gpg"),
+    });
+
+    if !result.is_valid_on_fs() {
+        return Err(PassError::EntryNotFound(pass_name.to_string()));
+    }
+
+    Ok(result)
 }
