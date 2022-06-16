@@ -1,8 +1,8 @@
 # libpass-rs
 
-![Branch Status](https://img.shields.io/github/checks-status/ftsell/libpass-rs/main?style=for-the-badge)
-![crates.io version](https://img.shields.io/crates/v/libpass?style=for-the-badge)
-![Docs](https://img.shields.io/docsrs/libpass?style=for-the-badge)
+[![Branch Status](https://img.shields.io/github/checks-status/ftsell/libpass-rs/main?style=for-the-badge)](https://github.com/ftsell/libpass-rs)
+[![crates.io version](https://img.shields.io/crates/v/libpass?style=for-the-badge)](https://crates.io/crates/libpass)
+[![Docs](https://img.shields.io/docsrs/libpass?style=for-the-badge)](https://docs.rs/libpass/)
 ![Maintenance Status](https://img.shields.io/maintenance/yes/2022?style=for-the-badge)
 
 > A library for interacting with [pass](https://www.passwordstore.org/) managed data
