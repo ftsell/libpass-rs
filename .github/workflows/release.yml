@@ -16,7 +16,7 @@ jobs:
   cargo-release:
     runs-on: ubuntu-latest
     outputs:
-      git-tag: ${{ steps.extract-git-tag.output.git-tag }}
+      tag: ${{ steps.extract-git-tag.outputs.tag }}
     steps:
       - run: |
           sudo apt-get update
@@ -34,8 +34,8 @@ jobs:
       - id: extract-git-tag
         run: |
           GIT_TAG=$(git describe --exact-match)
-          echo "Test: $GIT_TAG"
-          echo "::set-output name=git-tag::$GIT_TAG"
+          echo "Tag is $GIT_TAG"
+          echo "::set-output name=tag::$GIT_TAG"
         shell: bash
 
   github-release:
@@ -46,8 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ needs.cargo-release.outputs.git-tag }}
-      - run: echo ${{ needs.cargo-release.outputs.git-tag }}
+          ref: ${{ needs.cargo-release.outputs.tag }}
+      - run: echo ${{ needs.cargo-release.outputs.tag }}
       - uses: softprops/action-gh-release@v1
         with:
           body_path: changelog.md
