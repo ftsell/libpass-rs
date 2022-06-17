@@ -43,7 +43,6 @@
 
 pub use crate::errors::PassError;
 pub use crate::store_entry::{StoreDirectoryRef, StoreEntry, StoreFileRef};
-use lazy_static::lazy_static;
 use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -59,28 +58,33 @@ mod utils;
 /// Custom Result that is equivalent to `Result<T, PassError>`.
 pub type Result<T, E = PassError> = core::result::Result<T, E>;
 
-lazy_static! {
-    /// lazy-static that indicates the password store directory
-    ///
-    /// Defaults to `~/.password-store` but can be overridden by the environment variable `PASSWORD_STORE_DIR`
-    /// just like [pass itself](https://git.zx2c4.com/password-store/about/#ENVIRONMENT%20VARIABLES)
-    pub static ref PASSWORD_STORE_DIR: PathBuf = {
-        let path = match env::var("PASSWORD_STORE_DIR") {
-            Ok(env_var) => Path::new(&env_var).to_path_buf(),
-            Err(_) => Path::new("~/.password-store").to_path_buf(),
-        };
-        utils::canonicalize_path(&path).expect("Could not canonicalize PASSWORD_STORE_DIR path")
+/// Environment variable that is interpreted when evaluating [`password_store_dir()`]
+pub const PASSWORD_STORE_DIR_ENV: &str = "PASSWORD_STORE_DIR";
+
+/// The default password store directory.
+///
+/// This is usually *~/.password-store* but can be overwritten by the environment variable defined in
+/// [`PASSWORD_STORE_DIR_ENV`].
+///
+/// ## Errors
+/// This function can produce an error during path canonicalization.
+/// This means that paths which begin with `~` are resolved to the current users home directory which can
+/// produce io errors.
+pub fn password_store_dir() -> Result<PathBuf> {
+    let path = match env::var(PASSWORD_STORE_DIR_ENV) {
+        Ok(env_var) => Path::new(&env_var).to_path_buf(),
+        Err(_) => Path::new("~/.password-store").to_path_buf(),
     };
+    Ok(utils::canonicalize_path(&path)?)
 }
 
 /// List all entries in the password store
 pub fn list() -> Result<HashSet<StoreEntry>> {
-    list_and_map_folder(&*PASSWORD_STORE_DIR)
+    list_and_map_folder(password_store_dir()?)
 }
 
 /// Inspect the folder at *path* and recursively map it and its content to a [`StoreEntry`]
 fn list_and_map_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
-    log::trace!("Listing files in {}", PASSWORD_STORE_DIR.display());
     fs::read_dir(path)?
         // retrieve additional information about each file from filesystem
         .map(|file| match file {
@@ -120,8 +124,8 @@ fn list_and_map_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
 ///
 /// `pass_name` is a path to a password file or directory relative to the store root
 pub fn retrieve(pass_name: &str) -> Result<StoreEntry> {
-    let dir_path = PASSWORD_STORE_DIR.join(pass_name);
-    let file_path = PASSWORD_STORE_DIR.join(pass_name.to_string() + ".gpg");
+    let dir_path = password_store_dir()?.join(pass_name);
+    let file_path = password_store_dir()?.join(pass_name.to_string() + ".gpg");
 
     match (dir_path.exists(), file_path.exists()) {
         (true, true) => Err(PassError::AmbiguousPassName(pass_name.to_string())),
