@@ -1,10 +1,9 @@
 //! Type definitions and interaction logic for entries in a password store
 
+use crate::file_io::{CipherFile, PlainFile};
 use crate::{utils, PassError, Result};
 use std::collections::HashSet;
-use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::Read;
 use std::path::PathBuf;
 
 /// An entry in the password store
@@ -106,22 +105,14 @@ impl StoreFileRef {
             .to_string())
     }
 
-    /// Retrieve the encrypted files content
-    pub fn get_ciphertext(&self) -> Result<Vec<u8>> {
-        let mut file = File::open(&self.path)?;
-        let mut buffer = Vec::with_capacity(file.metadata()?.len() as usize);
-        file.read_to_end(&mut buffer)?;
-        Ok(buffer)
+    /// Get an IO handle to the encrypted content of this file
+    pub fn cipher_io(&self) -> Result<CipherFile> {
+        CipherFile::new(&self.path)
     }
 
-    /// Retrieve and decrypt the files content
-    pub fn get_plaintext(&self) -> Result<Vec<u8>> {
-        let mut ciphertext = self.get_ciphertext()?;
-        let mut plaintext = Vec::new();
-        let mut ctx = utils::create_gpg_context()?;
-        ctx.decrypt(&mut ciphertext, &mut plaintext)?;
-
-        Ok(plaintext)
+    /// Get an IO handle to the plaintext content of this file
+    pub fn plain_io(&self) -> Result<PlainFile> {
+        PlainFile::new(&self.path)
     }
 
     /// Verify that *self* references an existing file with the expected file extension

@@ -21,7 +21,7 @@
 //!
 //!     match libpass::retrieve("folder/subsecret-a").unwrap() {
 //!         StoreEntry::File(entry) => {
-//!             assert_eq!(entry.get_plaintext().unwrap(), "foobar123\n".as_bytes())
+//!             assert_eq!(entry.plain_io().unwrap().as_ref(), "foobar123\n".as_bytes())
 //!         },
 //!         _ => panic!()
 //!     }
@@ -50,6 +50,7 @@ use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 mod errors;
+pub mod file_io;
 mod store_entry;
 #[cfg(test)]
 mod tests;

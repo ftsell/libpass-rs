@@ -1,12 +1,21 @@
 #![allow(clippy::unwrap_used)]
 
 use crate::*;
+use std::io::Read;
 
 fn set_store_dir() {
     env::set_var(
         "PASSWORD_STORE_DIR",
         env::current_dir().unwrap().join("tests/simple"),
     );
+}
+
+fn retrieve_file(pass_name: &str) -> StoreFileRef {
+    if let StoreEntry::File(file) = retrieve(pass_name).unwrap() {
+        file
+    } else {
+        panic!("not a file")
+    }
 }
 
 #[test]
@@ -101,16 +110,25 @@ fn test_retrieve_entry() {
 }
 
 #[test]
-fn test_get_content() {
+fn test_read_ciphertext() {
     set_store_dir();
-    let entry = if let StoreEntry::File(file) = retrieve("secret-a").unwrap() {
-        file
-    } else {
-        panic!("not a file")
-    };
+    let entry = retrieve_file("secret-a");
 
-    assert!(entry.get_ciphertext().is_ok());
-    assert_eq!(entry.get_plaintext().unwrap(), "foobar123\n".as_bytes());
+    let mut buffer = Vec::new();
+    assert!(entry
+        .cipher_io()
+        .unwrap()
+        .as_mut()
+        .read_to_end(&mut buffer)
+        .is_ok());
+}
+
+#[test]
+fn test_read_plaintext() {
+    set_store_dir();
+    let entry = retrieve_file("secret-a");
+
+    assert_eq!(entry.plain_io().unwrap().as_ref(), "foobar123\n".as_bytes());
 }
 
 #[test]
