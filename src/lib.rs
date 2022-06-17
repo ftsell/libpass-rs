@@ -42,7 +42,7 @@
 )]
 
 pub use crate::errors::PassError;
-pub use crate::store_entry::{StoreDirectoryRef, StoreEntry, StoreFileRef};
+pub use crate::store_entry::{StoreDirectoryIter, StoreDirectoryRef, StoreEntry, StoreFileRef};
 use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};

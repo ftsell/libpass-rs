@@ -2,6 +2,7 @@
 
 use crate::file_io::{CipherFile, PlainFile};
 use crate::{utils, PassError, Result};
+use std::collections::hash_set::Iter as HashSetIter;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
@@ -65,6 +66,18 @@ impl StoreDirectoryRef {
             ))
         }
     }
+
+    /// iterate over all the entries contained in the storage hierarchy below this directory
+    ///
+    /// **Note:** The iterator iterates over all entries even if they are in a subdirectory further down the
+    /// storage hierarchy thus flattening it. If you want to iterate only over the entries contained directly
+    /// in this directory, use the [`content`](StoreDirectoryRef::content) field instead.
+    pub fn iter(&self) -> StoreDirectoryIter {
+        StoreDirectoryIter {
+            entries: self.content.iter(),
+            current_dir: None,
+        }
+    }
 }
 
 impl Hash for StoreDirectoryRef {
@@ -76,6 +89,49 @@ impl Hash for StoreDirectoryRef {
 impl PartialEq for StoreDirectoryRef {
     fn eq(&self, other: &Self) -> bool {
         self.path == other.path
+    }
+}
+
+impl<'a> IntoIterator for &'a StoreDirectoryRef {
+    type Item = &'a StoreEntry;
+    type IntoIter = StoreDirectoryIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// An iterator that iterates over [`&StoreEntries`](StoreEntry) contained in a directory and its
+/// subdirectories
+#[derive(Debug)]
+pub struct StoreDirectoryIter<'a> {
+    entries: HashSetIter<'a, StoreEntry>,
+    current_dir: Option<Box<StoreDirectoryIter<'a>>>,
+}
+
+impl<'a> Iterator for StoreDirectoryIter<'a> {
+    type Item = &'a StoreEntry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.current_dir {
+            Some(ref mut entry) => match entry.next() {
+                Some(next_entry) => Some(next_entry),
+                None => {
+                    self.current_dir = None;
+                    self.next()
+                }
+            },
+            None => match self.entries.next() {
+                Some(next_entry) => match next_entry {
+                    StoreEntry::File(_) => Some(next_entry),
+                    StoreEntry::Directory(dir) => {
+                        self.current_dir = Some(Box::new(dir.iter()));
+                        self.next()
+                    }
+                },
+                None => None,
+            },
+        }
     }
 }
 

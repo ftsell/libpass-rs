@@ -12,10 +12,16 @@ fn set_store_dir() {
 }
 
 fn retrieve_file(pass_name: &str) -> StoreFileRef {
-    if let StoreEntry::File(file) = retrieve(pass_name).unwrap() {
-        file
-    } else {
-        panic!("not a file")
+    match retrieve(pass_name).unwrap() {
+        StoreEntry::File(file) => file,
+        StoreEntry::Directory(_) => panic!("not a file"),
+    }
+}
+
+fn retrieve_dir(pass_name: &str) -> StoreDirectoryRef {
+    match retrieve(pass_name).unwrap() {
+        StoreEntry::File(_) => panic!("not a directory"),
+        StoreEntry::Directory(dir) => dir,
     }
 }
 
@@ -180,4 +186,11 @@ fn test_get_entry_name() {
         retrieve("folder/subfolder").unwrap().name().unwrap(),
         "folder/subfolder"
     );
+}
+
+#[test]
+fn test_directory_iterator() {
+    set_store_dir();
+    let entry = retrieve_dir("/");
+    assert_eq!(dbg!(entry.iter().collect::<Vec<_>>()).len(), 7);
 }
