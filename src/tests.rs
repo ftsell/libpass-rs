@@ -104,6 +104,11 @@ fn test_list_entries() {
 #[test]
 fn test_retrieve_entry() {
     set_store_dir();
+
+    // retrieving the store root works
+    assert!(retrieve("/").is_ok());
+    assert!(retrieve("/").is_ok());
+
     // retrieving a secret works
     assert_eq!(
         retrieve("secret-a").unwrap(),

@@ -124,9 +124,18 @@ fn list_and_map_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
 ///
 /// `pass_name` is a path to a password file or directory relative to the store root
 pub fn retrieve(pass_name: &str) -> Result<StoreEntry> {
+    // strip leading / characters if there is one
+    let pass_name = match pass_name.strip_prefix('/') {
+        Some(result) => result,
+        None => pass_name,
+    };
+
+    // resolve paths that could possibly be meant by pass_name
     let dir_path = password_store_dir()?.join(pass_name);
     let file_path = password_store_dir()?.join(pass_name.to_string() + ".gpg");
 
+    // check if there is a file or directory with that name and return the correct result after
+    // additional verification
     match (dir_path.exists(), file_path.exists()) {
         (true, true) => Err(PassError::AmbiguousPassName(pass_name.to_string())),
         (false, false) => Err(PassError::EntryNotFound(pass_name.to_string())),
