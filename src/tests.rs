@@ -18,13 +18,6 @@ fn retrieve_file(pass_name: &str) -> StoreFileRef {
     }
 }
 
-fn retrieve_dir(pass_name: &str) -> StoreDirectoryRef {
-    match retrieve(pass_name).unwrap() {
-        StoreEntry::File(_) => panic!("not a directory"),
-        StoreEntry::Directory(dir) => dir,
-    }
-}
-
 #[test]
 fn test_get_store_dir() {
     env::remove_var(PASSWORD_STORE_DIR_ENV);
