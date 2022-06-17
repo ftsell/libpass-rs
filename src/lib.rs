@@ -41,6 +41,8 @@
     unused_qualifications
 )]
 
+extern crate core;
+
 pub use crate::errors::PassError;
 pub use crate::store_entry::{StoreDirectoryIter, StoreDirectoryRef, StoreEntry, StoreFileRef};
 use std::collections::HashSet;
@@ -78,13 +80,22 @@ pub fn password_store_dir() -> Result<PathBuf> {
     Ok(utils::canonicalize_path(&path)?)
 }
 
-/// List all entries in the password store
+/// List all passwords in the password store in a flat data structure
+///
+/// For detailed information that preserves the tree structure of the store use [`retrieve("/")`](retrieve)
+/// instead.
 pub fn list() -> Result<HashSet<StoreEntry>> {
-    list_and_map_folder(password_store_dir()?)
+    match retrieve("/")? {
+        StoreEntry::File(file) => Err(PassError::InvalidStoreFormat(
+            file.path,
+            "Store root is not a directory but a file".to_string(),
+        )),
+        StoreEntry::Directory(dir) => Ok(HashSet::from_iter(dir.iter().cloned())),
+    }
 }
 
 /// Inspect the folder at *path* and recursively map it and its content to a [`StoreEntry`]
-fn list_and_map_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
+fn inspect_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
     fs::read_dir(path)?
         // retrieve additional information about each file from filesystem
         .map(|file| match file {
@@ -108,7 +119,7 @@ fn list_and_map_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
                 }))
             } else if file_type.is_dir() {
                 Ok(StoreEntry::Directory(StoreDirectoryRef{
-                    content: list_and_map_folder(&path)?,
+                    content: inspect_folder(&path)?,
                     path: path.clone(),
                 }))
             } else {
@@ -140,7 +151,7 @@ pub fn retrieve(pass_name: &str) -> Result<StoreEntry> {
         (true, true) => Err(PassError::AmbiguousPassName(pass_name.to_string())),
         (false, false) => Err(PassError::EntryNotFound(pass_name.to_string())),
         (true, false) => Ok(StoreEntry::Directory(StoreDirectoryRef {
-            content: list_and_map_folder(&dir_path)?,
+            content: inspect_folder(&dir_path)?,
             path: dir_path,
         })),
         (false, true) => Ok(StoreEntry::File(StoreFileRef { path: file_path })),
