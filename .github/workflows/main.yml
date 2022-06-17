@@ -41,4 +41,4 @@ jobs:
       - uses: ATiltedTree/setup-rust@v1
         with:
           rust-version: ${{ matrix.rust-version }}
-      - run: cargo test --no-fail-fast
+      - run: cargo test --no-fail-fast -- --show-output
