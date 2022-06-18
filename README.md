@@ -38,3 +38,13 @@ In detail, the following describes the state of each feature:
 This library can be used like any other rust library.
 Check its [crates.io page](https://crates.io/crates/libpass) and documentation at [docs.rs](https://docs.rs/libpass/).
 Examples are also available [in the documentation](https://docs.rs/libpass/).
+
+This means that you should depend on this library via your `Cargo.toml` like this:
+```toml
+[dependencies]
+libpass = "*"   # or a more specific version
+```
+
+Additionally, we depend on [gpgme-rs](https://github.com/gpg-rs/gpgme) which require the gpgme library and its
+development files (e.g., headers, gpgme-config) to be installed during the build process which you should install
+using your operating systems package manager.
