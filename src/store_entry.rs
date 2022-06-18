@@ -4,8 +4,10 @@ use crate::file_io::{CipherFile, PlainFile};
 use crate::{utils, PassError, Result};
 use std::collections::hash_set::Iter as HashSetIter;
 use std::collections::HashSet;
+use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
 
 /// An entry in the password store
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
@@ -159,6 +161,77 @@ impl StoreFileRef {
                 )
             })?
             .to_string())
+    }
+
+    /// Retrieve the encryption keys that are used to encrypt this file
+    ///
+    /// This is a collection of gpg keys which are used as gpg recipients during encryption operations.
+    /// They are taken from a `.gpg-id` file that is automatically searched for adjecent to this file and
+    /// further up in the directory hierarchy.
+    ///
+    /// ## Example
+    /// If you already have a [`StoreFileRef`], you can use this method like so:
+    ///
+    /// ```
+    /// # use std::io::{Read, Seek, SeekFrom, Write};
+    /// # use libpass::{StoreEntry};
+    /// # use libpass::file_io::CipherFile;
+    /// # std::env::set_var("PASSWORD_STORE_DIR", std::env::current_dir().unwrap().join("tests/simple"));
+    /// # let store_file_ref = match libpass::retrieve("secret-a").unwrap() {
+    /// #     StoreEntry::File(f) => f,
+    /// #     StoreEntry::Directory(_) => panic!()
+    /// # };
+    /// assert_eq!(
+    ///     store_file_ref.encryption_keys().unwrap()[0].id().unwrap(),
+    ///     "8497251104B6F45F"
+    /// )
+    /// ```
+    pub fn encryption_keys(&self) -> Result<Vec<gpgme::Key>> {
+        /// look for a .gpg-id file starting from the given directory path
+        fn look_for_keys_file_from_dir(path: &Path) -> Result<PathBuf> {
+            let gpg_id_path = path.join(".gpg-id");
+            if gpg_id_path.exists() {
+                if gpg_id_path.is_file() {
+                    Ok(gpg_id_path)
+                } else {
+                    Err(PassError::InvalidStoreFormat(
+                        gpg_id_path,
+                        "Path is a directory but should be a file containing encryption key ids"
+                            .to_string(),
+                    ))
+                }
+            } else {
+                // recursion into parent directory
+                look_for_keys_file_from_dir(path.parent().ok_or_else(|| {
+                    PassError::InvalidStoreFormat(
+                        path.to_owned(),
+                        "Path does not hava a parent but a .gpg-id file has not yet been found"
+                            .to_string(),
+                    )
+                })?)
+            }
+        }
+
+        // start search in directory that this file contains
+        let keys_path = look_for_keys_file_from_dir(self.path.parent().ok_or_else(|| {
+            PassError::InvalidStoreFormat(
+                self.path.to_owned(),
+                "File does not have a parent which means it is not contained in a password store"
+                    .to_string(),
+            )
+        })?)?;
+
+        // extract keys from the file
+        let mut gpg_ctx = utils::create_gpg_context()?;
+        let file = File::open(keys_path)?;
+        let buffered_reader = BufReader::new(file);
+        buffered_reader
+            .lines()
+            .map(|maybe_line| match maybe_line {
+                Err(e) => Err(PassError::from(e)),
+                Ok(line) => Ok(gpg_ctx.get_key(line)?),
+            })
+            .collect()
     }
 
     /// Get an IO handle to the encrypted content of this file

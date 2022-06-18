@@ -132,7 +132,6 @@ fn test_get_entry_name() {
     set_store_dir();
 
     // simple file
-
     assert_eq!(retrieve("secret-a").unwrap().name().unwrap(), "secret-a");
 
     // simple directory
@@ -148,5 +147,28 @@ fn test_get_entry_name() {
     assert_eq!(
         retrieve("folder/subfolder").unwrap().name().unwrap(),
         "folder/subfolder"
+    );
+}
+
+#[test]
+fn test_get_encryption_keys() {
+    set_store_dir();
+
+    // file at store root
+    assert_eq!(
+        retrieve_file("secret-a").encryption_keys().unwrap()[0]
+            .id()
+            .unwrap(),
+        "8497251104B6F45F"
+    );
+
+    // file in subfolder
+    assert_eq!(
+        retrieve_file("folder/subfolder/generated-a")
+            .encryption_keys()
+            .unwrap()[0]
+            .id()
+            .unwrap(),
+        "8497251104B6F45F"
     );
 }
