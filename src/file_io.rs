@@ -1,4 +1,4 @@
-//! Different handles and utilities for working file files
+//! Different handles and utilities for working with files
 
 use crate::{utils, Result};
 
