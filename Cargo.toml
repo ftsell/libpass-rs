@@ -12,7 +12,7 @@ keywords = ["pass", "password", "manager", "unix"]
 categories = ["api-bindings", "cryptography", "data-structures", "filesystem"]
 
 [workspace.metadata.release]
-pre-release-commit-message = "release {{version}}"
+pre-release-commit-message = "bump to version v{{version}}"
 tag-name = "v{{version}}"
 tag-message = "release {{crate_name}} v{{version}}"
 post-release-commit-message = "start next development iteration {{next_version}}"
