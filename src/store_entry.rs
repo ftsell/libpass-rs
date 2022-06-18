@@ -241,7 +241,7 @@ impl StoreFileRef {
 
     /// Get an IO handle to the plaintext content of this file
     pub fn plain_io(&self) -> Result<PlainFile> {
-        PlainFile::new(&self.path)
+        PlainFile::new(&self.path, self.encryption_keys()?)
     }
 
     /// Verify that *self* references an existing file with the expected file extension

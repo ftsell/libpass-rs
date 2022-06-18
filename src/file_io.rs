@@ -3,7 +3,7 @@
 use crate::{utils, Result};
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 /// A file handle that operates on encrypted content
@@ -68,9 +68,13 @@ impl AsMut<File> for CipherFile {
 ///
 /// Get an instance of this by calling [`StoreFileRef::plain_io()`](crate::StoreFileRef::cipher_io).
 ///
+/// PlainFiles are automatically, encrypted synced and closed when they go out of scope.
+/// Errors detected on closing are logged and ignored by the implementation of Drop.
+/// Use the method [`PlainFile::sync()`] if these errors must be manually handled.
+///
 /// ## Usage
 /// This handle decrypts the entries content into an internal buffer when it is created.
-/// That buffer is intended as the access point to the decrypted content via `AsRef<[u8]>` and `AsMut<[u8]>`.
+/// That buffer is intended as the access point to the decrypted content via `AsRef<Vec<u8>>` and `AsMut<Vec<u8>>`.
 ///
 /// For example, if you already have a [`StoreFileRef`](crate::StoreFileRef), you can use it to interact with
 /// the plaintext file content like so:
@@ -85,17 +89,18 @@ impl AsMut<File> for CipherFile {
 /// let mut plain_file: PlainFile = store_file_ref.plain_io().unwrap();
 ///
 /// // read encrypted content
-/// let content = plain_file.as_ref();
+/// let content: &Vec<u8> = plain_file.as_ref();
 /// assert_eq!(content, "foobar123\n".as_bytes());
 /// ```
 #[derive(Debug)]
 pub struct PlainFile {
     file: File,
     buffer: Vec<u8>,
+    encryption_keys: Vec<gpgme::Key>,
 }
 
 impl PlainFile {
-    pub(crate) fn new(path: &Path) -> Result<Self> {
+    pub(crate) fn new(path: &Path, encryption_keys: Vec<gpgme::Key>) -> Result<Self> {
         let mut result = Self {
             file: File::options()
                 .read(true)
@@ -103,6 +108,7 @@ impl PlainFile {
                 .create(false)
                 .open(path)?,
             buffer: Vec::with_capacity(path.metadata()?.len() as usize),
+            encryption_keys,
         };
         result.load_and_decrypt()?;
         Ok(result)
@@ -119,31 +125,43 @@ impl PlainFile {
         Ok(())
     }
 
-    // Encrypt the internal buffer and store it in the file
-    // fn encrypt_and_store(&self) -> Result<()> {
-    //     todo!("Writing back to the file is not yet implemented")
-    // }
+    /// Sync the buffer content into the file, encrypting it in the process
+    pub fn sync(&mut self) -> Result<()> {
+        // encrypt the local buffer
+        let mut gpg_ctx = utils::create_gpg_context()?;
+        let mut ciphertext = Vec::new();
+        gpg_ctx.encrypt(&self.encryption_keys, &self.buffer, &mut ciphertext)?;
+
+        // write it into the file
+        self.file.seek(SeekFrom::Start(0))?;
+        self.file.set_len(ciphertext.len() as u64)?;
+        self.file.write_all(&ciphertext)?;
+
+        // also sync the internal file handle
+        self.file.sync_all()?;
+        Ok(())
+    }
 }
 
-impl AsRef<[u8]> for PlainFile {
-    fn as_ref(&self) -> &[u8] {
+impl AsRef<Vec<u8>> for PlainFile {
+    fn as_ref(&self) -> &Vec<u8> {
         &self.buffer
     }
 }
 
-impl AsMut<[u8]> for PlainFile {
-    fn as_mut(&mut self) -> &mut [u8] {
+impl AsMut<Vec<u8>> for PlainFile {
+    fn as_mut(&mut self) -> &mut Vec<u8> {
         &mut self.buffer
     }
 }
 
-// impl Drop for PlainFile {
-//     fn drop(&mut self) {
-//         if let Err(e) = self.encrypt_and_store() {
-//             log::warn!(
-//                 "Error during drop of PlainFile, could not store encrypted content in file: {:?}",
-//                 e
-//             )
-//         }
-//     }
-// }
+impl Drop for PlainFile {
+    fn drop(&mut self) {
+        if let Err(e) = self.sync() {
+            log::warn!(
+                "Error during drop of PlainFile, could not store encrypted content in file: {:?}",
+                e
+            )
+        }
+    }
+}

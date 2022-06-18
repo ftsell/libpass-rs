@@ -120,6 +120,21 @@ fn test_read_ciphertext() {
 }
 
 #[test]
+fn test_write_plaintext() {
+    set_store_dir();
+    let mut handle = retrieve_file("secret-a").plain_io().unwrap();
+    let original_content = handle.as_ref().to_vec();
+
+    // write something different into the file
+    *handle.as_mut() = "hello world".as_bytes().to_vec();
+    assert!(dbg!(handle.sync()).is_ok());
+
+    // restore file content
+    *handle.as_mut() = original_content;
+    assert!(dbg!(handle.sync()).is_ok())
+}
+
+#[test]
 fn test_read_plaintext() {
     set_store_dir();
     let entry = retrieve_file("secret-a");

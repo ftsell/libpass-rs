@@ -24,7 +24,7 @@ In detail, the following describes the state of each feature:
 - [x] **Retrieving information** about a certain entry in a password store
 - [x] **Retrieving the content** of an encrypted entry (meaning the actual password)
 - [ ] **Searching** inside all decrypted files for a given string
-- [ ] **Inserting or updating** the content of a given entry
+- [x] **Updating** the content of a given entry
 - [ ] **Generating** a new password and save it
 - [ ] **Removing** a given entry from the store (whole directories as well as single files)
 - [ ] **Moving** a given entry to a new location in the store, re-encrypting it if the new destination
