@@ -127,11 +127,11 @@ fn test_write_plaintext() {
 
     // write something different into the file
     *handle.as_mut() = "hello world".as_bytes().to_vec();
-    assert!(dbg!(handle.sync()).is_ok());
+    assert!(dbg!(handle.sync(false)).is_ok());
 
     // restore file content
     *handle.as_mut() = original_content;
-    assert!(dbg!(handle.sync()).is_ok())
+    assert!(dbg!(handle.sync(false)).is_ok())
 }
 
 #[test]

@@ -94,8 +94,18 @@ impl AsMut<File> for CipherFile {
 /// ```
 #[derive(Debug)]
 pub struct PlainFile {
+    /// The underlying file which this handle wraps
     file: File,
+
+    /// The plaintext buffer that is exposed to the user to do their operations with
     buffer: Vec<u8>,
+
+    /// Backup buffer containing the last-synced plaintext content.
+    /// This is used to decide whether an actual sync is needed or if it can be skipped because the content
+    /// has not been changed.
+    last_synced_buffer: Vec<u8>,
+
+    /// Collection of keys which are used as gpg recipients during encryption
     encryption_keys: Vec<gpgme::Key>,
 }
 
@@ -108,6 +118,7 @@ impl PlainFile {
                 .create(false)
                 .open(path)?,
             buffer: Vec::with_capacity(path.metadata()?.len() as usize),
+            last_synced_buffer: Vec::new(),
             encryption_keys,
         };
         result.load_and_decrypt()?;
@@ -116,26 +127,37 @@ impl PlainFile {
 
     /// Load the content from filesystem and decrypt it into the internal buffer
     fn load_and_decrypt(&mut self) -> Result<()> {
+        // read ciphertext from file
         let mut ciphertext = Vec::with_capacity(self.file.metadata()?.len() as usize);
         self.file.read_to_end(&mut ciphertext)?;
 
+        // decrypt ciphertext and store it in buffer
         let mut gpg_ctx = utils::create_gpg_context()?;
         gpg_ctx.decrypt(&mut ciphertext, &mut self.buffer)?;
 
+        self.last_synced_buffer = self.buffer.clone();
         Ok(())
     }
 
     /// Sync the buffer content into the file, encrypting it in the process
-    pub fn sync(&mut self) -> Result<()> {
-        // encrypt the local buffer
-        let mut gpg_ctx = utils::create_gpg_context()?;
-        let mut ciphertext = Vec::new();
-        gpg_ctx.encrypt(&self.encryption_keys, &self.buffer, &mut ciphertext)?;
+    ///
+    /// Normally this operation only performs an actual content encryption and synchronization if necessary,
+    /// meaning if the buffer has been changed from the last time it was synced.
+    /// To overwrite this behaviour and to force encryption and synchronization, set `force=true`.
+    pub fn sync(&mut self, force: bool) -> Result<()> {
+        // only do a content synchronization if the content has actually ben changed by the user
+        if !force && self.last_synced_buffer != self.buffer {
+            // encrypt the local buffer
+            let mut gpg_ctx = utils::create_gpg_context()?;
+            let mut ciphertext = Vec::new();
+            gpg_ctx.encrypt(&self.encryption_keys, &self.buffer, &mut ciphertext)?;
 
-        // write it into the file
-        self.file.seek(SeekFrom::Start(0))?;
-        self.file.set_len(ciphertext.len() as u64)?;
-        self.file.write_all(&ciphertext)?;
+            // write it into the file
+            self.file.seek(SeekFrom::Start(0))?;
+            self.file.set_len(ciphertext.len() as u64)?;
+            self.file.write_all(&ciphertext)?;
+            self.last_synced_buffer = self.buffer.clone();
+        }
 
         // also sync the internal file handle
         self.file.sync_all()?;
@@ -157,7 +179,7 @@ impl AsMut<Vec<u8>> for PlainFile {
 
 impl Drop for PlainFile {
     fn drop(&mut self) {
-        if let Err(e) = self.sync() {
+        if let Err(e) = self.sync(false) {
             log::warn!(
                 "Error during drop of PlainFile, could not store encrypted content in file: {:?}",
                 e
