@@ -111,7 +111,7 @@ pub struct RwPlainFile {
 
 impl RwPlainFile {
     pub(crate) fn new(path: &Path, encryption_keys: Vec<gpgme::Key>) -> Result<Self> {
-        log::warn!("Opening {} as PlainFile", path.display());
+        log::trace!("Opening {} as PlainFile", path.display());
         let mut result = Self {
             file: File::options()
                 .read(true)
