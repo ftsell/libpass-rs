@@ -32,6 +32,10 @@ pub enum PassError {
     #[error("Could not decode the path {0} as UTF-8 string")]
     PathDecodingError(PathBuf),
 
+    /// A gpg key was tried to be loaded but it could not be
+    #[error("Could not load the gpg key {0}")]
+    GpgKeyNotFoundError(String),
+
     /// Some IO error occurred that is preserved as `source`
     #[error("IO Error")]
     IOError {

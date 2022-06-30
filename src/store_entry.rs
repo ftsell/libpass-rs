@@ -242,7 +242,9 @@ impl StoreFileRef {
                 Err(e) => Err(PassError::from(e)),
                 Ok(line) => {
                     log::trace!("Loading key {}", line);
-                    Ok(gpg_ctx.get_key(line)?)
+                    Ok(gpg_ctx
+                        .get_key(&line)
+                        .map_err(|_| PassError::GpgKeyNotFoundError(line))?)
                 }
             })
             .collect()
