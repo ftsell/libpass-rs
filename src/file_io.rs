@@ -129,6 +129,7 @@ impl PlainFile {
     fn load_and_decrypt(&mut self) -> Result<()> {
         // read ciphertext from file
         let mut ciphertext = Vec::with_capacity(self.file.metadata()?.len() as usize);
+        self.file.seek(SeekFrom::Start(0))?;
         self.file.read_to_end(&mut ciphertext)?;
 
         // decrypt ciphertext and store it in buffer
