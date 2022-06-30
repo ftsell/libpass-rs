@@ -187,8 +187,15 @@ impl StoreFileRef {
     /// )
     /// ```
     pub fn encryption_keys(&self) -> Result<Vec<gpgme::Key>> {
+        log::warn!(
+            "Looking for encryption keys for entry at {}",
+            self.path.display()
+        );
+
         /// look for a .gpg-id file starting from the given directory path
         fn look_for_keys_file_from_dir(path: &Path) -> Result<PathBuf> {
+            log::trace!("Looking for .gpg-id file in directory {}", path.display());
+
             let gpg_id_path = path.join(".gpg-id");
             if gpg_id_path.exists() {
                 if gpg_id_path.is_file() {
@@ -222,6 +229,10 @@ impl StoreFileRef {
         })?)?;
 
         // extract keys from the file
+        log::trace!(
+            "Found .gpg-id file at {}, inspecting gpg keys from it",
+            keys_path.display()
+        );
         let mut gpg_ctx = utils::create_gpg_context()?;
         let file = File::open(keys_path)?;
         let buffered_reader = BufReader::new(file);
@@ -229,7 +240,10 @@ impl StoreFileRef {
             .lines()
             .map(|maybe_line| match maybe_line {
                 Err(e) => Err(PassError::from(e)),
-                Ok(line) => Ok(gpg_ctx.get_key(line)?),
+                Ok(line) => {
+                    log::trace!("Loading key {}", line);
+                    Ok(gpg_ctx.get_key(line)?)
+                }
             })
             .collect()
     }

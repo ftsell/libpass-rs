@@ -111,7 +111,7 @@ pub struct PlainFile {
 
 impl PlainFile {
     pub(crate) fn new(path: &Path, encryption_keys: Vec<gpgme::Key>) -> Result<Self> {
-        log::trace!("Opening {} as PlainFile", path.display());
+        log::warn!("Opening {} as PlainFile", path.display());
         let mut result = Self {
             file: File::options()
                 .read(true)
@@ -128,19 +128,18 @@ impl PlainFile {
 
     /// Load the content from filesystem and decrypt it into the internal buffer
     fn load_and_decrypt(&mut self) -> Result<()> {
+        log::trace!("Trying to load ciphertext and decrypt it to plaintext");
+
         // read ciphertext from file
-        log::trace!("Reading ciphertext from file");
         let mut ciphertext = Vec::with_capacity(self.file.metadata()?.len() as usize);
         self.file.seek(SeekFrom::Start(0))?;
         self.file.read_to_end(&mut ciphertext)?;
 
         // decrypt ciphertext and store it in buffer
-        log::trace!("Decrypting ciphertext");
         let mut gpg_ctx = utils::create_gpg_context()?;
         gpg_ctx.decrypt(&mut ciphertext, &mut self.buffer)?;
 
         self.last_synced_buffer = self.buffer.clone();
-        log::trace!("Ciphertext fully loaded and decrypted");
         Ok(())
     }
 
