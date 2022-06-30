@@ -128,15 +128,18 @@ impl PlainFile {
     /// Load the content from filesystem and decrypt it into the internal buffer
     fn load_and_decrypt(&mut self) -> Result<()> {
         // read ciphertext from file
+        log::trace!("Reading ciphertext from file");
         let mut ciphertext = Vec::with_capacity(self.file.metadata()?.len() as usize);
         self.file.seek(SeekFrom::Start(0))?;
         self.file.read_to_end(&mut ciphertext)?;
 
         // decrypt ciphertext and store it in buffer
+        log::trace!("Decrypting ciphertext");
         let mut gpg_ctx = utils::create_gpg_context()?;
         gpg_ctx.decrypt(&mut ciphertext, &mut self.buffer)?;
 
         self.last_synced_buffer = self.buffer.clone();
+        log::trace!("Ciphertext fully loaded and decrypted");
         Ok(())
     }
 
