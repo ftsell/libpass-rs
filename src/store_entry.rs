@@ -1,6 +1,6 @@
 //! Type definitions and interaction logic for entries in a password store
 
-use crate::file_io::{CipherFile, PlainFile};
+use crate::file_io::{CipherFile, RoPlainFile, RwPlainFile};
 use crate::{utils, PassError, Result};
 use std::collections::hash_set::Iter as HashSetIter;
 use std::collections::HashSet;
@@ -255,9 +255,14 @@ impl StoreFileRef {
         CipherFile::new(&self.path)
     }
 
-    /// Get an IO handle to the plaintext content of this file
-    pub fn plain_io(&self) -> Result<PlainFile> {
-        PlainFile::new(&self.path, self.encryption_keys()?)
+    /// Get a read-write IO handle to the plaintext content of this file
+    pub fn plain_io_rw(&self) -> Result<RwPlainFile> {
+        RwPlainFile::new(&self.path, self.encryption_keys()?)
+    }
+
+    /// Get a read-only IO handle to the plaintext of this file
+    pub fn plain_io_ro(&self) -> Result<RoPlainFile> {
+        RoPlainFile::new(&self.path)
     }
 
     /// Verify that *self* references an existing file with the expected file extension

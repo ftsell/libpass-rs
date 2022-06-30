@@ -122,7 +122,7 @@ fn test_read_ciphertext() {
 #[test]
 fn test_write_plaintext() {
     set_store_dir();
-    let mut handle = retrieve_file("secret-a").plain_io().unwrap();
+    let mut handle = retrieve_file("secret-a").plain_io_rw().unwrap();
     let original_content = handle.as_ref().to_vec();
 
     // write something different into the file
@@ -139,7 +139,10 @@ fn test_read_plaintext() {
     set_store_dir();
     let entry = retrieve_file("secret-a");
 
-    assert_eq!(entry.plain_io().unwrap().as_ref(), "foobar123\n".as_bytes());
+    assert_eq!(
+        entry.plain_io_rw().unwrap().as_ref(),
+        "foobar123\n".as_bytes()
+    );
 }
 
 #[test]

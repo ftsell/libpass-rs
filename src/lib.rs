@@ -21,7 +21,7 @@
 //!
 //!     match libpass::retrieve("folder/subsecret-a").unwrap() {
 //!         StoreEntry::File(entry) => {
-//!             assert_eq!(entry.plain_io().unwrap().as_ref(), "foobar123\n".as_bytes())
+//!             assert_eq!(entry.plain_io_ro().unwrap().as_ref(), "foobar123\n".as_bytes())
 //!         },
 //!         _ => panic!()
 //!     }

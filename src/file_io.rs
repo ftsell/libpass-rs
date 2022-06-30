@@ -66,11 +66,11 @@ impl AsMut<File> for CipherFile {
 
 /// A file handle that operates on plaintext file content, transparently encrypting and decrypting it.
 ///
-/// Get an instance of this by calling [`StoreFileRef::plain_io()`](crate::StoreFileRef::cipher_io).
+/// Get an instance of this by calling [`StoreFileRef::plain_io_rw()`](crate::StoreFileRef::plain_io_rw).
 ///
 /// PlainFiles are automatically, encrypted synced and closed when they go out of scope.
 /// Errors detected on closing are logged and ignored by the implementation of Drop.
-/// Use the method [`PlainFile::sync()`] if these errors must be manually handled.
+/// Use the method [`RwPlainFile::sync()`] if these errors must be manually handled.
 ///
 /// ## Usage
 /// This handle decrypts the entries content into an internal buffer when it is created.
@@ -80,20 +80,20 @@ impl AsMut<File> for CipherFile {
 /// the plaintext file content like so:
 /// ```
 /// # use libpass::{StoreEntry};
-/// # use libpass::file_io::PlainFile;
+/// # use libpass::file_io::RwPlainFile;
 /// # std::env::set_var("PASSWORD_STORE_DIR", std::env::current_dir().unwrap().join("tests/simple"));
 /// # let store_file_ref = match libpass::retrieve("secret-a").unwrap() {
 /// #    StoreEntry::File(f) => f,
 /// #     _ => panic!()
 /// # };
-/// let mut plain_file: PlainFile = store_file_ref.plain_io().unwrap();
+/// let mut plain_file: RwPlainFile = store_file_ref.plain_io_rw().unwrap();
 ///
 /// // read encrypted content
 /// let content: &Vec<u8> = plain_file.as_ref();
 /// assert_eq!(content, "foobar123\n".as_bytes());
 /// ```
 #[derive(Debug)]
-pub struct PlainFile {
+pub struct RwPlainFile {
     /// The underlying file which this handle wraps
     file: File,
 
@@ -109,7 +109,7 @@ pub struct PlainFile {
     encryption_keys: Vec<gpgme::Key>,
 }
 
-impl PlainFile {
+impl RwPlainFile {
     pub(crate) fn new(path: &Path, encryption_keys: Vec<gpgme::Key>) -> Result<Self> {
         log::warn!("Opening {} as PlainFile", path.display());
         let mut result = Self {
@@ -169,19 +169,19 @@ impl PlainFile {
     }
 }
 
-impl AsRef<Vec<u8>> for PlainFile {
+impl AsRef<Vec<u8>> for RwPlainFile {
     fn as_ref(&self) -> &Vec<u8> {
         &self.buffer
     }
 }
 
-impl AsMut<Vec<u8>> for PlainFile {
+impl AsMut<Vec<u8>> for RwPlainFile {
     fn as_mut(&mut self) -> &mut Vec<u8> {
         &mut self.buffer
     }
 }
 
-impl Drop for PlainFile {
+impl Drop for RwPlainFile {
     fn drop(&mut self) {
         if let Err(e) = self.sync(false) {
             log::warn!(
@@ -189,5 +189,72 @@ impl Drop for PlainFile {
                 e
             )
         }
+    }
+}
+
+/// A file handle that operates on plaintext file content, transparently decrypting it.
+/// This handle only supports read-only operations.
+/// If you required read-write support, use a [`RwPlainFile`] instead.
+///
+/// Get an instance of this by calling [`StoreFileRef::plain_io_ro()`](crate::StoreFileRef::plain_io_ro).
+///
+/// ## Usage
+/// This handle decrypts the entries content into an internal buffer when it is created.
+/// That buffer is intended as the access point to the decrypted content via `AsRef<Vec<u8>>`.
+///
+/// For example, if you already have a [`StoreFileRef`](crate::StoreFileRef), you can use it to interact with
+/// the plaintext file content like so:
+/// ```
+/// # use libpass::{StoreEntry};
+/// # use libpass::file_io::{RoPlainFile};
+/// # std::env::set_var("PASSWORD_STORE_DIR", std::env::current_dir().unwrap().join("tests/simple"));
+/// # let store_file_ref = match libpass::retrieve("secret-a").unwrap() {
+/// #    StoreEntry::File(f) => f,
+/// #     _ => panic!()
+/// # };
+/// let mut plain_file: RoPlainFile = store_file_ref.plain_io_ro().unwrap();
+///
+/// // read encrypted content
+/// let content: &Vec<u8> = plain_file.as_ref();
+/// assert_eq!(content, "foobar123\n".as_bytes());
+#[derive(Debug)]
+pub struct RoPlainFile {
+    /// The plaintext buffer that is exposed to the user to do their operations with
+    buffer: Vec<u8>,
+}
+
+impl RoPlainFile {
+    pub(crate) fn new(path: &Path) -> Result<Self> {
+        log::warn!("Opening {} as RoPlainFile", path.display());
+
+        let mut file = File::options().read(true).create(false).open(path)?;
+        Ok(Self {
+            buffer: Self::load_and_decrypt(&mut file)?,
+        })
+    }
+
+    /// Load the content from filesystem and decrypt it into the internal buffer
+    fn load_and_decrypt(file: &mut File) -> Result<Vec<u8>> {
+        log::trace!("Trying to load ciphertext and decrypt it to plaintext");
+
+        let file_len = file.metadata()?.len() as usize;
+        let mut buffer = Vec::with_capacity(file_len);
+
+        // read ciphertext from file
+        let mut ciphertext = Vec::with_capacity(file_len);
+        file.seek(SeekFrom::Start(0))?;
+        file.read_to_end(&mut ciphertext)?;
+
+        // decrypt ciphertext and store it in buffer
+        let mut gpg_ctx = utils::create_gpg_context()?;
+        gpg_ctx.decrypt(&mut ciphertext, &mut buffer)?;
+
+        Ok(buffer)
+    }
+}
+
+impl AsRef<Vec<u8>> for RoPlainFile {
+    fn as_ref(&self) -> &Vec<u8> {
+        &self.buffer
     }
 }
