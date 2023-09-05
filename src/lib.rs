@@ -119,7 +119,7 @@ fn inspect_folder(path: impl AsRef<Path>) -> Result<HashSet<StoreEntry>> {
                 }))
             } else if file_type.is_dir() {
                 Ok(StoreEntry::Directory(StoreDirectoryRef{
-                    content: inspect_folder(&path)?,
+                    content: inspect_folder(path)?,
                     path: path.clone(),
                 }))
             } else {
