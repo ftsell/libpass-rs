@@ -19,7 +19,7 @@ post-release-commit-message = "start next development iteration {{next_version}}
 
 [dependencies]
 log = "0.4.20"
-thiserror = "1.0.31"
+thiserror = "1.0.48"
 directories = "5.0.1"
 gpgme = "0.11.0"
 
