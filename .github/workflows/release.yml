@@ -21,7 +21,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install libgpgme-dev
       - run: cargo install cargo-release
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Configure git identity
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -42,7 +42,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ needs.cargo-release.outputs.tag }}
       - uses: softprops/action-gh-release@v1
@@ -56,7 +56,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
       - run: |
