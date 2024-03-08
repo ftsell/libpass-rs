@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.cargo-release.outputs.tag }}
-      - uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v2
         with:
           body_path: changelog.md
           tag_name: ${{ needs.cargo-release.outputs.tag }}
